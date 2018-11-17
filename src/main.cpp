@@ -93,18 +93,14 @@ void init(Settings &cfg, GLFWwindow* &window) {
   glBindVertexArray(VertexArrayID);
 
   // Vertex Buffer
-  float* triangle2 = model.vertices.data();
   glGenBuffers(1, &vertexBuffer);
   glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-  //glBufferData(GL_ARRAY_BUFFER, 4 * model.vertices.size(), model.vertices.data(), GL_STATIC_DRAW);
-  glBufferData(GL_ARRAY_BUFFER, 4 * model.vertices.size(), triangle2, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, 4 * model.vertices.size(), model.vertices.data(), GL_STATIC_DRAW);
 
   // Index Buffer
-  unsigned int* indices2 = model.indices.data();
   glGenBuffers(1, &indexBuffer);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
-  //glBufferData(GL_ELEMENT_ARRAY_BUFFER, 4 * model.indices.size(), model.indices.data(), GL_STATIC_DRAW);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, 4 * model.indices.size(), indices2, GL_STATIC_DRAW);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, 4 * model.indices.size(), model.indices.data(), GL_STATIC_DRAW);
 
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); 

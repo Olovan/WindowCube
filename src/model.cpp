@@ -71,10 +71,6 @@ bool Model::loadFromFile(string filename) {
 
   // Normalize Vertices
   normalize(vertices);
-  for(int i = 0; i < vertices.size(); i++) {
-    if((i % 3) == 2)
-      vertices[i] = 0;
-  }
 
   return true;
 }
