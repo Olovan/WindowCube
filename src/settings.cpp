@@ -31,4 +31,7 @@ void Settings::parse(string option, string value) {
   else if (option.compare("WINDOW_TITLE") == 0) {
     windowTitle = value;
   }
+  else if (option.compare("MODEL_NAME") == 0) {
+    modelName = value;
+  }
 }

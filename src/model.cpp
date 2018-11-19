@@ -1,3 +1,4 @@
+#include <GL/glew.h>
 #include "model.h" 
 #include <fstream>
 #include <sstream>
@@ -6,6 +7,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <cmath>
+#include <GL/gl.h>
 
 using namespace std;
 
@@ -13,6 +15,10 @@ vector<string> split_coords(string coords);
 void normalize(vector<float> &v);
 
 bool Model::loadFromFile(string filename) {
+  return Model::loadFromFile(filename, false);
+}
+
+bool Model::loadFromFile(string filename, bool normalize_verts) {
   ifstream file(filename);
 
   // Bail out if file cannot be opened or doesn't exist
@@ -65,16 +71,53 @@ bool Model::loadFromFile(string filename) {
     }
   }
 
+  // Push temp index array into indice array now that they are all positive values
   for(int i = 0; i < tmpIndices.size(); i++) {
     indices.push_back((unsigned int)tmpIndices[i]);
   }
 
   // Normalize Vertices
-  normalize(vertices);
+  if(normalize_verts) {
+    normalize(vertices);
+  }
+
+  setupBuffers(); // Now that the data is loaded up we can set up the buffers
 
   return true;
 }
 
+void Model::setupBuffers() {
+  // VAO
+  glGenVertexArrays(1, &VAO);
+  glBindVertexArray(VAO);
+
+  // VBO
+  glGenBuffers(1, &VBO);
+  glBindBuffer(GL_ARRAY_BUFFER, VBO);
+  glBufferData(GL_ARRAY_BUFFER, 4 * vertices.size(), vertices.data(), GL_STATIC_DRAW);
+
+  // EBO
+  glGenBuffers(1, &EBO);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, 4 * indices.size(), indices.data(), GL_STATIC_DRAW);
+
+  //Setup attribute bindings
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); 
+
+  glBindVertexArray(0); // Stop tracking state with VAO
+  // Now that we are no longer tracking state with VAO we can unbind these buffers
+  glBindBuffer(GL_ARRAY_BUFFER, 0); 
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
+void Model::render() {
+  glBindVertexArray(VAO);
+  glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, (void*)0);
+  glBindVertexArray(0);
+}
+
+// Helper Methods
 void normalize(vector<float> &coords) {
   float max = 0;
   for(int i = 0; i < coords.size(); i++) {
@@ -97,3 +140,4 @@ vector<string> split_coords(string coords) {
   }
   return results;
 }
+

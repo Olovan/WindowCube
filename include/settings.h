@@ -8,6 +8,7 @@ class Settings {
     int windowWidth = 640;
     int windowHeight = 480;
     string windowTitle = "TITLE";
+    string modelName = "rabbit.obj";
 
     void loadFromFile(string filename);
 

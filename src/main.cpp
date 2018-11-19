@@ -12,40 +12,34 @@
 #include <GLFW/glfw3.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 using namespace std;
+using glm::vec3;
+using glm::mat4;
 Model model;
-unsigned int vertexBuffer, indexBuffer;
+Model rabbit;
 GLuint vShader, fShader, program;
-GLuint VertexArrayID;
-
-float triangle[] = {
-  -1, -1, 0,
-  1, -1, 0,
-  0, 1, 0
-};
-
-unsigned int indices[] = {0, 1, 2};
+glm::mat4 modelMat, view, proj; //3 global matrices
+float dist = 3.0f;
 
 int main(int argc, char* argv[]) {
   Settings cfg;
-  model.loadFromFile("rabbit.obj");
 
   GLFWwindow* window;
   init(cfg, window);
 
-  printf("Verts:   %ld\n", model.vertices.size());
-  printf("Normals: %ld\n", model.normals.size());
-  printf("Indices: %ld\n", model.indices.size());
-  printf("Colors:  %ld\n\n", model.colors.size());
-  printf("Poly0 Indices:  %d, %d, %d\n", model.indices[0], model.indices[1], model.indices[2]);
-  printf("Poly0 Vertices: %f, %f, %f\n", model.vertices[model.indices[0]], model.vertices[model.indices[1]], model.vertices[model.indices[2]]);
-  printf("Indices Size:  %d\n", model.indices.size() * sizeof(unsigned int));
-  printf("Vertices Size:  %d\n", model.vertices.size() * sizeof(float));
-  printf("%p --- %p\n", model.vertices.data(), &model.vertices[0]);
+  model.loadFromFile(cfg.modelName);
+  rabbit.loadFromFile("rabbit.obj", true);
 
   while(!glfwWindowShouldClose(window)) {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    modelMat = glm::rotate(modelMat, .01f, glm::vec3(0, 1, 0));
+  view = glm::lookAt(vec3(0.0f, 0.0f, dist), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
     render();
     glfwSwapBuffers(window);
     glfwPollEvents();
@@ -77,39 +71,22 @@ void init(Settings &cfg, GLFWwindow* &window) {
   glfwSwapInterval(1);
   glfwSetKeyCallback(window, keyCallback);
 
-  /* 
-  // Ignored by Shaders
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  //glOrtho(-4, 4, -4, 4, -5, 5);
-  gluPerspective(90, 1.5, 0.01, 100);
-  glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();
-  gluLookAt(0, 0, -5, 0, 0, 0, 0, 1, 0);
-  */
-
-  // VAO
-  glGenVertexArrays(1, &VertexArrayID);
-  glBindVertexArray(VertexArrayID);
-
-  // Vertex Buffer
-  glGenBuffers(1, &vertexBuffer);
-  glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-  glBufferData(GL_ARRAY_BUFFER, 4 * model.vertices.size(), model.vertices.data(), GL_STATIC_DRAW);
-
-  // Index Buffer
-  glGenBuffers(1, &indexBuffer);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, 4 * model.indices.size(), model.indices.data(), GL_STATIC_DRAW);
-
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); 
-
-  glBindVertexArray(0);
-
   //Shaders
   program = LoadShaders("shaders/vertex.glsl", "shaders/fragment.glsl");
   glUseProgram(program);
+
+  // Enable stencil and depth test
+  glEnable(GL_STENCIL_TEST);
+  glEnable(GL_DEPTH_TEST);
+  glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+
+  glEnable(GL_CULL_FACE);
+  glCullFace(GL_BACK);
+  glFrontFace(GL_CCW);
+
+  proj = glm::perspective(45.0f, 1.5f, 0.1f, 10.0f);
+  view = glm::lookAt(vec3(0.0f, 0.0f, 3.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
+  modelMat = glm::mat4(1.0f);
 }
 
 void crash(string message) {
@@ -117,11 +94,30 @@ void crash(string message) {
   exit(1);
 }
 
+void setMatrix(glm::mat4 mat) {
+  int loc = glGetUniformLocation(program, "matrix");
+  glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(mat));
+}
+
 void render() {
-  glBindVertexArray(VertexArrayID);
-  //glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (void*)0);
-  glDrawElements(GL_TRIANGLES, model.indices.size(), GL_UNSIGNED_INT, (void*)0);
-  glBindVertexArray(0);
+  // Render quad without depth mask
+  mat4 temp = proj * view * modelMat;
+  setMatrix(temp);
+  glEnable(GL_STENCIL_TEST);
+  glStencilFunc(GL_ALWAYS, 1, 0xFF);
+  glStencilMask(0xFF);
+  glDepthMask(GL_FALSE);
+  model.render();
+
+  // Render rabbit with depth mask and stencil mask
+  glStencilFunc(GL_EQUAL, 1, 0xFF);
+  glStencilMask(0x00);
+  glDepthMask(GL_TRUE);
+  mat4 rabbitModelMat = glm::scale(glm::mat4(1), glm::vec3(0.3f, 0.3f, 0.3f));
+  setMatrix(proj * view * rabbitModelMat);
+  rabbit.render();
+  glDisable(GL_STENCIL_TEST);
+  glStencilMask(0xFF);
 }
 
 string readFile(string filename) {
