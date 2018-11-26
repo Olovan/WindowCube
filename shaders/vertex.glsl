@@ -1,11 +1,20 @@
 #version 330 core
-layout (location=0) in vec3 aPos;
+layout (location=0) in vec3 inPos;
+layout (location=1) in vec3 inNorm;
+layout (location=2) in vec2 inTex;
 
-out vec3 color;
-uniform mat4 matrix;
+out vec3 pos;
+out vec3 norm;
+out vec2 tex;
+
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
 
 void main() 
 {
-  gl_Position = matrix * vec4(aPos.x, aPos.y, aPos.z, 1.0);
-  color = vec3(abs(aPos.z), abs(aPos.y), abs(aPos.x));
+  gl_Position = projection * view * model * vec4(inPos.x, inPos.y, inPos.z, 1.0);
+  pos = vec3(model * vec4(inPos, 1));
+  norm = vec3(model * vec4(inNorm, 1));
+  tex = inTex;
 }

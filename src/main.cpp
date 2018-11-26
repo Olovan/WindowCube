@@ -21,11 +21,16 @@
 using namespace std;
 using glm::vec3;
 using glm::mat4;
-Model model;
-Model rabbit;
+Model quad;
+Model customModel;
 GLuint vShader, fShader, program;
-glm::mat4 modelMat, view, proj; //3 global matrices
+glm::mat4 view, proj; //3 global matrices
 float dist = 3.0f;
+float sideMovement = 0.0f;
+float upMovement = 0.0f;
+
+
+void setMatrix(glm::mat4 mat, std::string name); 
 
 int main(int argc, char* argv[]) {
   Settings cfg;
@@ -33,13 +38,23 @@ int main(int argc, char* argv[]) {
   GLFWwindow* window;
   init(cfg, window);
 
-  model.loadFromFile(cfg.modelName);
-  rabbit.loadFromFile("rabbit.obj", true);
+  quad.loadFromFile(cfg.modelName);
+  customModel.loadFromFile("knight.obj", true);
+  quad.program = program;
+  customModel.program = program;
 
+  std::cout << "Quad Vertices: " << quad.vertices.size() << std::endl;
+  std::cout << "Model Vertices: " << customModel.vertices.size() << std::endl;
+
+  quad.modelMatrix = glm::scale(quad.modelMatrix, glm::vec3(3, 3, 3));
   while(!glfwWindowShouldClose(window)) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    modelMat = glm::rotate(modelMat, .01f, glm::vec3(0, 1, 0));
-  view = glm::lookAt(vec3(0.0f, 0.0f, dist), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
+
+    //Rotate objects
+    //quad.modelMatrix = glm::rotate(quad.modelMatrix, .01f, glm::vec3(0, 1, 0));
+    customModel.modelMatrix = glm::rotate(customModel.modelMatrix, .01f, glm::vec3(0, 1, 0));
+
+    view = glm::lookAt(vec3(sideMovement, upMovement, dist), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
     render();
     glfwSwapBuffers(window);
     glfwPollEvents();
@@ -86,7 +101,7 @@ void init(Settings &cfg, GLFWwindow* &window) {
 
   proj = glm::perspective(45.0f, 1.5f, 0.1f, 10.0f);
   view = glm::lookAt(vec3(0.0f, 0.0f, 3.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
-  modelMat = glm::mat4(1.0f);
+  setMatrix(proj, "projection");
 }
 
 void crash(string message) {
@@ -94,28 +109,27 @@ void crash(string message) {
   exit(1);
 }
 
-void setMatrix(glm::mat4 mat) {
-  int loc = glGetUniformLocation(program, "matrix");
+void setMatrix(glm::mat4 mat, std::string name) {
+  int loc = glGetUniformLocation(program, name.c_str());
   glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(mat));
 }
 
 void render() {
   // Render quad without depth mask
-  mat4 temp = proj * view * modelMat;
-  setMatrix(temp);
+  setMatrix(view, "view");
   glEnable(GL_STENCIL_TEST);
   glStencilFunc(GL_ALWAYS, 1, 0xFF);
   glStencilMask(0xFF);
   glDepthMask(GL_FALSE);
-  model.render();
+  glColorMask(GL_FALSE, GL_FALSE, GL_TRUE, GL_TRUE);
+  quad.render();
+  glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
-  // Render rabbit with depth mask and stencil mask
+  // Render customModel with depth mask and stencil mask
   glStencilFunc(GL_EQUAL, 1, 0xFF);
   glStencilMask(0x00);
   glDepthMask(GL_TRUE);
-  mat4 rabbitModelMat = glm::scale(glm::mat4(1), glm::vec3(0.3f, 0.3f, 0.3f));
-  setMatrix(proj * view * rabbitModelMat);
-  rabbit.render();
+  customModel.render();
   glDisable(GL_STENCIL_TEST);
   glStencilMask(0xFF);
 }

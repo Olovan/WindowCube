@@ -1,5 +1,8 @@
 #include <GL/glew.h>
 #include "model.h" 
+
+#include "tinyobj.h"
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -7,7 +10,12 @@
 #include <stdlib.h>
 #include <iostream>
 #include <cmath>
+#include <cstddef>
+#include <unordered_map>
 #include <GL/gl.h>
+#include <glm/mat4x4.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include "tinyobj.h"
 
 using namespace std;
 
@@ -19,70 +27,52 @@ bool Model::loadFromFile(string filename) {
 }
 
 bool Model::loadFromFile(string filename, bool normalize_verts) {
-  ifstream file(filename);
-
-  // Bail out if file cannot be opened or doesn't exist
-  if(!file.good()) return false;
-
-  vector<int> tmpIndices;
-  string line;
-  while(getline(file, line)) {
-    string token = line.substr(0, line.find(" "));
-    string value = line.substr(line.find(" ") + 1);
-    istringstream stream(value);
-
-    if(token.compare("v") == 0) {
-      float x[3];
-      sscanf(value.c_str(), "%f %f %f", x, x+1, x+2);
-      for(int i = 0; i < 3; i++) {
-        vertices.push_back(x[i]);
-      }
-      // DEBUG push colors
-      colors.push_back(.8);
-      colors.push_back(.8);
-      colors.push_back(.8);
-    }
-    else if(token.compare("vn") == 0) {
-      float x[3];
-      sscanf(value.c_str(), "%f %f %f", x, x+1, x+2);
-      for(int i = 0; i < 3; i++) {
-        normals.push_back(x[i]);
-      }
-    }
-    else if(token.compare("vt") == 0) {
-    }
-    else if(token.compare("f") == 0) {
-      unsigned int x[6];
-      sscanf(value.c_str(), "%d//%d %d//%d %d//%d", x, x+1, x+2, x+3, x+4, x+5);
-      for(int i = 0; i < 3; i++) {
-        tmpIndices.push_back(x[i * 2]);
-      }
-    }
-    else {
-    }
+  tinyobj::attrib_t attrib;
+  std::vector<tinyobj::shape_t> shapes;
+  std::vector<tinyobj::material_t> materials;
+  std::string warn, err;
+  if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str())) {
+    std::cout << "Obj load failed for file " << filename << std::endl;
+    return false;
   }
 
-  //Fix Indices because OBJ file format is not 0 indexed
-  for(int i = 0; i < tmpIndices.size(); i++) {
-    if(tmpIndices[i] > 0) {
-      tmpIndices[i] -= 1;
-    } else {
-      tmpIndices[i] = tmpIndices.size() - tmpIndices[i];
-    }
-  }
+  positions = attrib.vertices;
+  normals = attrib.normals;
+  textures = attrib.texcoords;
 
-  // Push temp index array into indice array now that they are all positive values
-  for(int i = 0; i < tmpIndices.size(); i++) {
-    indices.push_back((unsigned int)tmpIndices[i]);
-  }
-
-  // Normalize Vertices
   if(normalize_verts) {
-    normalize(vertices);
+    normalize(positions);
+    normalize(normals);
   }
 
-  setupBuffers(); // Now that the data is loaded up we can set up the buffers
-
+  // Create vertices and indices
+  int dups = 0;
+  std::unordered_map<Vertex, uint32_t> uniqueVerts = {};
+  for(const auto& shape : shapes) {
+    for(const auto& index : shape.mesh.indices) {
+      Vertex v = {};
+      v.Position.x = positions[index.vertex_index * 3 + 0];
+      v.Position.y = positions[index.vertex_index * 3 + 1];
+      v.Position.z = positions[index.vertex_index * 3 + 2];
+      v.Normal.x = normals[index.normal_index * 3 + 0];
+      v.Normal.y = normals[index.normal_index * 3 + 1];
+      v.Normal.z = normals[index.normal_index * 3 + 2];
+      if(textures.size() > 0) {
+        v.TextureCoordinate.x = textures[index.texcoord_index * 2 + 0];
+        v.TextureCoordinate.y = textures[index.texcoord_index * 2 + 1];
+      }
+      if(uniqueVerts.count(v) == 0) {
+        uniqueVerts[v] = static_cast<uint32_t>(vertices.size());
+        vertices.push_back(v);
+      } 
+      else {
+        dups++;
+      }
+      indices.push_back(uniqueVerts[v]);
+    }
+  }
+  setupBuffers();
+  std::cout << "FOUND " << dups << " DUPLICATES" << std::endl;
   return true;
 }
 
@@ -94,7 +84,7 @@ void Model::setupBuffers() {
   // VBO
   glGenBuffers(1, &VBO);
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  glBufferData(GL_ARRAY_BUFFER, 4 * vertices.size(), vertices.data(), GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
 
   // EBO
   glGenBuffers(1, &EBO);
@@ -103,7 +93,11 @@ void Model::setupBuffers() {
 
   //Setup attribute bindings
   glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); 
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0); 
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Normal)); 
+  glEnableVertexAttribArray(2);
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TextureCoordinate)); 
 
   glBindVertexArray(0); // Stop tracking state with VAO
   // Now that we are no longer tracking state with VAO we can unbind these buffers
@@ -113,6 +107,8 @@ void Model::setupBuffers() {
 
 void Model::render() {
   glBindVertexArray(VAO);
+  int loc = glGetUniformLocation(program, "model");
+  glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
   glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, (void*)0);
   glBindVertexArray(0);
 }
@@ -139,5 +135,10 @@ vector<string> split_coords(string coords) {
     token = strtok(NULL, " ");
   }
   return results;
+}
+
+Vertex buildFromIndices(int pos, int norm, int tex) {
+  Vertex vert;
+  return vert;
 }
 
