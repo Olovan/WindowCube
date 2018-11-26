@@ -69,6 +69,9 @@ void init(Settings &cfg, GLFWwindow* &window) {
   if(!glfwInit()) {
     crash("GLFW init failed!");
   }
+  if(!GLEW_VERSION_3_3) {
+    crash("OpenGL Version 3.3 is not supported by this system!");
+  }
   cfg.loadFromFile("settings.config");
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
