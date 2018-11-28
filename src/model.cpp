@@ -72,7 +72,6 @@ bool Model::loadFromFile(string filename, bool normalize_verts) {
     }
   }
   setupBuffers();
-  std::cout << "FOUND " << dups << " DUPLICATES" << std::endl;
   return true;
 }
 
@@ -113,6 +112,14 @@ void Model::render() {
   glBindVertexArray(0);
 }
 
+void Model::render(glm::mat4 base) {
+  glBindVertexArray(VAO);
+  int loc = glGetUniformLocation(program, "model");
+  glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(base * modelMatrix));
+  glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, (void*)0);
+  glBindVertexArray(0);
+}
+
 // Helper Methods
 void normalize(vector<float> &coords) {
   float max = 0;
@@ -120,7 +127,6 @@ void normalize(vector<float> &coords) {
     if(fabs(coords[i]) > max)
       max = fabs(coords[i]);
   }
-  printf("MAX: %f\n", max);
   for(int i = 0; i < coords.size(); i++) {
     coords[i] = coords[i] / max;
   }

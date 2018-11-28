@@ -20,6 +20,7 @@ class Model {
     bool loadFromFile(std::string filename);
     void setupBuffers();
     void render();
+    void render(glm::mat4);
 
   private:
     unsigned int VAO; // Vertex Array Object

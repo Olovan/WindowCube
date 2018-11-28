@@ -6,11 +6,11 @@ in vec2 tex;
 
 //uniform sampler2D tex;
 
-vec3 objectColor = vec3(0.7, 0.2, 0.0);
+uniform vec3 objectColor = vec3(0.7, 0.2, 0.0);
 
-float ambientStrength = 0.2;
-vec3 lightPos = vec3(-10, 15, 0);
-vec3 lightColor = vec3(1, 1, 1);
+uniform float ambientStrength = 0.2;
+uniform vec3 lightPos = vec3(-10, 15, 10);
+uniform vec3 lightColor = vec3(1, 1, 1);
 
 out vec4 FragColor;
 
