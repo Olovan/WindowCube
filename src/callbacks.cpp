@@ -8,7 +8,7 @@
 extern float dist;
 extern float sideMovement;
 extern float upMovement;
-extern glm::mat4 view;
+extern glm::mat4 view, proj;
 extern GLFWwindow* window;
 
 void keyHoldEvents() {
@@ -37,24 +37,11 @@ void keyCallback(GLFWwindow* win, int key, int scancode, int action, int mods) {
     glfwSetWindowShouldClose(win, true);
   if(action == GLFW_PRESS) {
     switch(key) {
-      case GLFW_KEY_W:
-        dist -= 0.2;
-        break;
-      case GLFW_KEY_S:
-        dist += 0.2;
-        break;
-      case GLFW_KEY_D:
-        sideMovement += 0.2;
-        break;
-      case GLFW_KEY_A:
-        sideMovement -= 0.2;
-        break;
-      case GLFW_KEY_E:
-        upMovement += 0.2;
-        break;
-      case GLFW_KEY_Q:
-        upMovement -= 0.2;
-        break;
     }
   }
+}
+
+void windowSizeCallback(GLFWwindow* win, int width, int height) {
+  proj = glm::perspective(45.0f, (float)width / height, 0.1f, 100.0f);
+  glViewport(0, 0, width, height);
 }

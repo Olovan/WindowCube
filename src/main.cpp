@@ -115,6 +115,7 @@ void init(Settings &cfg, GLFWwindow* &window) {
   if(!window) {
     crash("Window is null!");
   }
+  glfwSetWindowSizeCallback(window, windowSizeCallback);
   glfwMakeContextCurrent(window);
   glewExperimental = true;
   GLenum err = glewInit();
