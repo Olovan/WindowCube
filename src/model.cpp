@@ -105,18 +105,29 @@ void Model::setupBuffers() {
 }
 
 void Model::render() {
-  glBindVertexArray(VAO);
-  int loc = glGetUniformLocation(program, "model");
-  glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
-  glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, (void*)0);
-  glBindVertexArray(0);
+  render(glm::mat4(1));
 }
 
 void Model::render(glm::mat4 base) {
   glBindVertexArray(VAO);
+  // Set model matrix
   int loc = glGetUniformLocation(program, "model");
   glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(base * modelMatrix));
+  // Set up textures
+  if(texture.assigned) {
+    int useTex = glGetUniformLocation(program, "useTexture");
+    glUniform1i(useTex, 1);
+    glBindTexture(GL_TEXTURE_2D, texture.id);
+  }
+
   glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, (void*)0);
+
+  // Turn off textures if they were turned on
+  if(texture.assigned) {
+    glBindTexture(GL_TEXTURE_2D, 0);
+    int useTex = glGetUniformLocation(program, "useTexture");
+    glUniform1i(useTex, 0);
+  }
   glBindVertexArray(0);
 }
 

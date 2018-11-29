@@ -14,7 +14,9 @@ uniform mat4 projection;
 void main() 
 {
   gl_Position = projection * view * model * vec4(inPos.x, inPos.y, inPos.z, 1.0);
+  // Pass on the position
   pos = vec3(model * vec4(inPos, 1));
-  norm = vec3(model * vec4(inNorm, 1));
+  // Modify normal and pass it on
+  norm = mat3(transpose(inverse(model))) * inNorm; //Special normal transformation because of non-uniform scaling
   tex = inTex;
 }

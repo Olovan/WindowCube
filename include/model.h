@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include "vertex.h"
+#include "texture.h"
 #include <glm/mat4x4.hpp>
 
 class Model {
@@ -14,6 +15,7 @@ class Model {
     std::vector<unsigned int> indices;
     glm::mat4 modelMatrix;
     unsigned int program; //Shader program
+    Texture texture;
 
 
     bool loadFromFile(std::string filename, bool normalize);

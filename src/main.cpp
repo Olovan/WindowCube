@@ -25,6 +25,7 @@ using glm::vec3;
 using glm::mat4;
 
 GLFWwindow* window;
+Model ground;
 Model customModel;
 Model customModel2;
 Model customModel3;
@@ -45,42 +46,54 @@ int main(int argc, char* argv[]) {
 
   init(cfg, window);
 
+  // Load Models
   customModel.loadFromFile("rabbit.obj", true);
-  customModel2.loadFromFile("knight.obj", true);
-  customModel3.loadFromFile("sphere.obj", true);
+  customModel2.loadFromFile("dog.obj", true);
+  customModel3.loadFromFile("earth.obj", true);
   customModel4.loadFromFile("lamp.obj", true);
   customModel5.loadFromFile("teapot.obj", true);
   street.loadFromFile("StreetEnv.obj", true);
+  ground.loadFromFile("quad.obj", true);
   initCube();
+
+  // Load Textures
+  customModel2.texture.loadFromFile("dog.jpg");
+  customModel3.texture.loadFromFile("earth.jpg");
+
   customModel.program = program;
   customModel2.program = program;
   customModel3.program = program;
   customModel4.program = program;
   customModel5.program = program;
   street.program = program;
+  ground.program = program;
 
   std::cout << "Model Vertices: " << customModel.vertices.size() << std::endl;
 
   customModel.modelMatrix = glm::translate(customModel.modelMatrix, glm::vec3(0, -0.4, 0));
   customModel.modelMatrix = glm::scale(customModel.modelMatrix, glm::vec3(0.5, 0.5, 0.5));
-  customModel2.modelMatrix = glm::translate(customModel2.modelMatrix, glm::vec3(0, -0.5, 0));
+  customModel2.modelMatrix = glm::translate(customModel2.modelMatrix, glm::vec3(0, -0.15, 0));
+  customModel2.modelMatrix = glm::rotate(customModel2.modelMatrix, -90.f * 3.14159265f/180, glm::vec3(1, 0, 0));
+  customModel2.modelMatrix = glm::scale(customModel2.modelMatrix, glm::vec3(0.3, 0.3, 0.3));
   customModel3.modelMatrix = glm::scale(customModel3.modelMatrix, glm::vec3(0.3, 0.3, 0.3));
   customModel4.modelMatrix = glm::translate(customModel4.modelMatrix, glm::vec3(0, -0.3, 0));
-  customModel5.modelMatrix = glm::translate(customModel5.modelMatrix, glm::vec3(0, 0.3, 0.5));
+  customModel5.modelMatrix = glm::translate(customModel5.modelMatrix, glm::vec3(0, 0.3, 0.3));
   customModel5.modelMatrix = glm::scale(customModel5.modelMatrix, glm::vec3(0.1, 0.1, 0.1));
   street.modelMatrix = glm::translate(street.modelMatrix, glm::vec3(0, -0.65, 0));
   street.modelMatrix = glm::scale(street.modelMatrix, glm::vec3(10, 10, 10));
+  ground.modelMatrix = glm::translate(ground.modelMatrix, glm::vec3(0, -0.5, 0));
+  ground.modelMatrix = glm::rotate(ground.modelMatrix, -90.0f * 3.14159265f/180, glm::vec3(1, 0, 0));
+  ground.modelMatrix = glm::scale(ground.modelMatrix, glm::vec3(1.125, 1.125, 1.125));
   while(!glfwWindowShouldClose(window)) {
     glClearColor(0.3, 0.3, 0.3, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     //Rotate objects
-    //customModel2.modelMatrix = glm::rotate(customModel2.modelMatrix, .01f, glm::vec3(0, 1, 0));
     customModel.modelMatrix = glm::rotate(customModel.modelMatrix, .01f, glm::vec3(0, 1, 0));
-    customModel2.modelMatrix = glm::rotate(customModel2.modelMatrix, -.005f, glm::vec3(0, 1, 0));
+    customModel2.modelMatrix = glm::rotate(glm::mat4(), -.005f, glm::vec3(0, 1, 0)) * customModel2.modelMatrix;
+    customModel3.modelMatrix = glm::rotate(customModel3.modelMatrix, -.005f, glm::vec3(0, 1, 0));
 
     keyHoldEvents();
-    //view = glm::lookAt(vec3(sideMovement, upMovement, dist), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
     render();
     glfwSwapBuffers(window);
     glfwPollEvents();
@@ -145,29 +158,77 @@ void setMatrix(glm::mat4 mat, std::string name) {
 glm::mat4 cubeModel;
 void render() {
   setMatrix(view, "view");
+  int lightPos = glGetUniformLocation(program, "lightPos");
+  int eyePos = glGetUniformLocation(program, "eyePos");
+  int hardness = glGetUniformLocation(program, "hardness");
+  int specPower = glGetUniformLocation(program, "specularStrength");
+  int objColor = glGetUniformLocation(program, "objectColor");
+  int ambientStr = glGetUniformLocation(program, "ambientStrength");
+  glm::vec3 eye = getEyePosFromView(view);
+  glUniform4f(eyePos, eye.x, eye.y, eye.z, 1.0f);
 
   //cubeModel = glm::rotate(cubeModel, 0.017f, glm::vec3(0, 1, 0));
+  glUniform4f(lightPos, 0, 100, -10, 0);
   renderCube(cubeModel);
+  glUniform4f(lightPos, 0, 5, -10, 0);
+  glUniform3f(objColor, 0.5, 0.2, 0.0);
+  glUniform1f(hardness, 50);
+  glUniform1f(specPower, 0.7);
+  ground.render();
+  glUniform3f(objColor, 0.4, 0.4, 0.4);
 
   // Render customModel with depth mask and stencil mask
   glClear(GL_DEPTH_BUFFER_BIT);
   glEnable(GL_STENCIL_TEST);
   glStencilMask(0x00);
 
+  // Front (Rabbit)
+  glUniform4f(lightPos, 0, 0, 10, 1);
   glStencilFunc(GL_EQUAL, 1, 0xFF);
   customModel.render();
 
+  // Back (Dog)
+  glUniform4f(lightPos, 0, 0, -10, 1);
+  glUniform1f(hardness, 2);
+  glUniform1f(specPower, 0.1);
   glStencilFunc(GL_EQUAL, 2, 0xFF);
   customModel2.render();
 
+  // Left (Earth)
+  glUniform1f(hardness, 2);
+  glUniform1f(specPower, 0.1);
+  glUniform4f(lightPos, -10, 0, 0, 1);
   glStencilFunc(GL_EQUAL, 3, 0xFF);
   customModel3.render();
 
+  // Right (Lamp Post)
+  glUniform1f(hardness, 32);
+  glUniform1f(specPower, 0.4);
+  glUniform4f(lightPos, 10, 0, 0, 1);
   glStencilFunc(GL_EQUAL, 4, 0xFF);
   customModel4.render();
   street.render();
 
+  // Teapot
+  //glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE);
+  //glDepthMask(GL_FALSE);
   glStencilFunc(GL_NOTEQUAL, 0, 0xFF);
+  glDisable(GL_DEPTH_TEST);
+  glDepthMask(GL_FALSE);
+  // Draw a red outline
+  glUniform4f(lightPos, 0, 0, 10, 1);
+
+  // Set up red sillouette
+  glUniform1f(ambientStr, 1.0f);
+  glUniform1f(specPower, 0);
+  glUniform3f(objColor, 1, 0, 0);
+  customModel5.render();
+  // Reset to defaults
+  glUniform1f(ambientStr, 0.4);
+  glUniform1f(specPower, 0.4);
+  glUniform3f(objColor, 0.4, 0.4, 0.4);
+  glDepthMask(GL_TRUE);
+  glEnable(GL_DEPTH_TEST);
   customModel5.render();
 
   glDisable(GL_STENCIL_TEST);
@@ -178,5 +239,10 @@ string readFile(string filename) {
   ifstream f(filename);
   string s((istreambuf_iterator<char>(f)), istreambuf_iterator<char>());
   return s;
+}
+
+glm::vec3 getEyePosFromView(glm::mat4 &view) {
+  glm::mat4 inv = glm::inverse(view);
+  return glm::vec3(inv[3][0], inv[3][1], inv[3][2]);
 }
 

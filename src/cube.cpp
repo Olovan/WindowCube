@@ -44,32 +44,33 @@ void initCube() {
 
 void renderCube(glm::mat4 base) {
   // Set up different color for window sides
-  float color[] = {0.2, 0.2, 0.2};
-  float defaultColor[] = {0.8, 0.8, 0.8};
-  int loc = glGetUniformLocation(program, "objectColor");
-  glUniform3fv(loc, 1, color);
+  int objColor = glGetUniformLocation(program, "objectColor");
 
+  glUniform3f(objColor, 0.8, 0.2, 0.2);
   //Front
   enableStencil(1);
   front.render(base);
   disableStencil();
 
+  glUniform3f(objColor, 0.2, 0.8, 0.2);
   // Back
   enableStencil(2);
   back.render(base);
   disableStencil();
 
+  glUniform3f(objColor, 0.2, 0.2, 0.8);
   // Left
   enableStencil(3);
   left.render(base);
   disableStencil();
 
+  glUniform3f(objColor, 0.8, 0.2, 0.8);
   // Right
   enableStencil(4);
   right.render(base);
   disableStencil();
 
-  glUniform3fv(loc, 1, defaultColor);
+  glUniform3f(objColor, 0.4, 0.4, 0.4);
 
 
   top.render(base);
