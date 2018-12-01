@@ -10,6 +10,7 @@
 float DEG_TO_RAD = 3.14159265 / 180;
 
 Model front, back, left, right, top, bottom;
+Model cube;
 extern GLuint program;
 
 void initCube() {
@@ -19,6 +20,7 @@ void initCube() {
   right.loadFromFile("quad.obj");
   top.loadFromFile("quad.obj");
   bottom.loadFromFile("quad.obj");
+  cube.loadFromFile("cube.obj");
 
   front.program = program;
   back.program = program;
@@ -26,6 +28,7 @@ void initCube() {
   bottom.program = program;
   left.program = program;
   right.program = program;
+  cube.program = program;
 
   front.modelMatrix = glm::translate(front.modelMatrix, glm::vec3(0, 0, 0.5));
   back.modelMatrix = glm::rotate(back.modelMatrix, 180.0f * DEG_TO_RAD, glm::vec3(0, 1, 0));
@@ -46,13 +49,16 @@ void renderCube(glm::mat4 base) {
   // Set up different color for window sides
   int objColor = glGetUniformLocation(program, "objectColor");
 
+  glUniform3f(objColor, 1, 1, 1);
+  renderFrame(base);
+
   glUniform3f(objColor, 0.8, 0.2, 0.2);
   //Front
   enableStencil(1);
-  front.render(base);
+  top.render(base);
   disableStencil();
 
-  glUniform3f(objColor, 0.2, 0.8, 0.2);
+  glUniform3f(objColor, 0.2, 0.5, 0.2);
   // Back
   enableStencil(2);
   back.render(base);
@@ -72,8 +78,7 @@ void renderCube(glm::mat4 base) {
 
   glUniform3f(objColor, 0.4, 0.4, 0.4);
 
-
-  top.render(base);
+  //front.render(base);
   bottom.render(base);
 }
 
@@ -82,6 +87,42 @@ void enableStencil(int num) {
   glStencilFunc(GL_ALWAYS, num, 0xFF);
   glStencilMask(0xFF);
   //glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+}
+
+void renderFrame(glm::mat4 base) {
+  cube.modelMatrix = glm::mat4(1);
+  cube.modelMatrix = glm::translate(glm::mat4(1), glm::vec3(0.5f, 0.0f, 0.5f));
+  cube.modelMatrix = glm::scale(cube.modelMatrix, glm::vec3(0.05f, 1.0f, 0.05f));
+  cube.render(base);
+
+  cube.modelMatrix = glm::translate(glm::mat4(1), glm::vec3(-0.5f, 0.0f, 0.5f));
+  cube.modelMatrix = glm::scale(cube.modelMatrix, glm::vec3(0.05f, 1.0f, 0.05f));
+  cube.render(base);
+
+  cube.modelMatrix = glm::translate(glm::mat4(1), glm::vec3(0.5f, 0.0f, -0.5f));
+  cube.modelMatrix = glm::scale(cube.modelMatrix, glm::vec3(0.05f, 1.0f, 0.05f));
+  cube.render(base);
+
+  cube.modelMatrix = glm::translate(glm::mat4(1), glm::vec3(-0.5f, 0.0f, -0.5f));
+  cube.modelMatrix = glm::scale(cube.modelMatrix, glm::vec3(0.05f, 1.0f, 0.05f));
+  cube.render(base);
+
+  // Flat top
+  cube.modelMatrix = glm::translate(glm::mat4(1), glm::vec3(0.0f, 0.5f, 0.5f));
+  cube.modelMatrix = glm::scale(cube.modelMatrix, glm::vec3(1.05, 0.05f, 0.05f));
+  cube.render(base);
+
+  cube.modelMatrix = glm::translate(glm::mat4(1), glm::vec3(0.0f, 0.5f, -0.5f));
+  cube.modelMatrix = glm::scale(cube.modelMatrix, glm::vec3(1.05, 0.05f, 0.05f));
+  cube.render(base);
+
+  cube.modelMatrix = glm::translate(glm::mat4(1), glm::vec3(0.5f, 0.5f, 0.0f));
+  cube.modelMatrix = glm::scale(cube.modelMatrix, glm::vec3(0.05f, 0.05f, 1.05));
+  cube.render(base);
+
+  cube.modelMatrix = glm::translate(glm::mat4(1), glm::vec3(-0.5f, 0.5f, 0.0f));
+  cube.modelMatrix = glm::scale(cube.modelMatrix, glm::vec3(0.05f, 0.05f, 1.05));
+  cube.render(base);
 }
 
 void disableStencil() {

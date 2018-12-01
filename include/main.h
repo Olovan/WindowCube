@@ -10,3 +10,5 @@ void render();
 std::string readFile(std::string filename);
 GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path);
 glm::vec3 getEyePosFromView(glm::mat4 &view); 
+void setupModels();
+void resetLightToDefaults();

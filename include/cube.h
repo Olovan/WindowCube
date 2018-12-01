@@ -4,5 +4,6 @@
 
 void initCube();
 void renderCube(glm::mat4);
+void renderFrame(glm::mat4 base); 
 void enableStencil(int num); 
 void disableStencil();
