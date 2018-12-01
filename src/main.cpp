@@ -34,7 +34,7 @@ Model customModel5;
 Model street;
 Model handmadeModel;
 GLuint vShader, fShader, program;
-glm::mat4 view, proj; 
+glm::mat4 view = glm::mat4(1.0f), proj = glm::mat4(1.0f); 
 float dist = 3.0f;
 float sideMovement = 0.0f;
 float upMovement = 0.0f;
@@ -122,7 +122,7 @@ void setMatrix(glm::mat4 mat, std::string name) {
   glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(mat));
 }
 
-glm::mat4 cubeModel;
+glm::mat4 cubeModel = glm::mat4(1.0f);
 
 void render() {
   setMatrix(view, "view");

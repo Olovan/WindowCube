@@ -13,7 +13,7 @@ class Model {
     std::vector<float> textures;
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
-    glm::mat4 modelMatrix;
+    glm::mat4 modelMatrix = glm::mat4(1.0f);
     unsigned int program; //Shader program
     Texture texture;
 
