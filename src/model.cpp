@@ -71,6 +71,47 @@ bool Model::loadFromFile(string filename, bool normalize_verts) {
       indices.push_back(uniqueVerts[v]);
     }
   }
+
+  // Set up tangent and bitangent coordinates for normal mapping
+  for (unsigned int i = 0 ; i < indices.size() ; i += 3) {
+      Vertex& v0 = vertices[indices[i]];
+      Vertex& v1 = vertices[indices[i+1]];
+      Vertex& v2 = vertices[indices[i+2]];
+
+      glm::vec3 edge1 = v1.Position - v0.Position;
+      glm::vec3 edge2 = v2.Position - v0.Position;
+
+      float DeltaU1 = v1.TextureCoordinate.x - v0.TextureCoordinate.x;
+      float DeltaV1 = v1.TextureCoordinate.y - v0.TextureCoordinate.y;
+      float DeltaU2 = v2.TextureCoordinate.x - v0.TextureCoordinate.x;
+      float DeltaV2 = v2.TextureCoordinate.y - v0.TextureCoordinate.y;
+
+      float f = 1.0f / (DeltaU1 * DeltaV2 - DeltaU2 * DeltaV1);
+
+      glm::vec3 Tangent, Bitangent;
+
+      Tangent.x = f * (DeltaV2 * edge1.x - DeltaV1 * edge2.x);
+      Tangent.y = f * (DeltaV2 * edge1.y - DeltaV1 * edge2.y);
+      Tangent.z = f * (DeltaV2 * edge1.z - DeltaV1 * edge2.z);
+
+      Bitangent.x = f * (-DeltaU2 * edge1.x - DeltaU1 * edge2.x);
+      Bitangent.y = f * (-DeltaU2 * edge1.y - DeltaU1 * edge2.y);
+      Bitangent.z = f * (-DeltaU2 * edge1.z - DeltaU1 * edge2.z);
+
+      v0.Tangent += Tangent;
+      v1.Tangent += Tangent;
+      v2.Tangent += Tangent;
+      v0.BiTangent += Bitangent;
+      v1.BiTangent += Bitangent;
+      v2.BiTangent += Bitangent;
+  }
+
+  for (unsigned int i = 0 ; i < vertices.size() ; i++) {
+    vertices[i].Tangent = glm::normalize(vertices[i].Tangent);
+    vertices[i].BiTangent = glm::normalize(vertices[i].BiTangent);
+  } 
+
+
   setupBuffers();
   return true;
 }
@@ -97,6 +138,10 @@ void Model::setupBuffers() {
   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Normal)); 
   glEnableVertexAttribArray(2);
   glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TextureCoordinate)); 
+  glEnableVertexAttribArray(3);
+  glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Tangent)); 
+  glEnableVertexAttribArray(4);
+  glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, BiTangent)); 
 
   glBindVertexArray(0); // Stop tracking state with VAO
   // Now that we are no longer tracking state with VAO we can unbind these buffers
@@ -114,18 +159,44 @@ void Model::render(glm::mat4 base) {
   int loc = glGetUniformLocation(program, "model");
   glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(base * modelMatrix));
   // Set up textures
-  if(texture.assigned) {
-    int useTex = glGetUniformLocation(program, "useTexture");
+  if(diffuseTexture.assigned) {
+    int useTex = glGetUniformLocation(program, "useDiffuseTexture");
     glUniform1i(useTex, 1);
-    glBindTexture(GL_TEXTURE_2D, texture.id);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, diffuseTexture.id);
+  }
+  if(specularTexture.assigned) {
+    int useTex = glGetUniformLocation(program, "useSpecularTexture");
+    glUniform1i(useTex, 1);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, specularTexture.id);
+  }
+  if(normalTexture.assigned) {
+    int useTex = glGetUniformLocation(program, "useNormalTexture");
+    glUniform1i(useTex, 1);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, normalTexture.id);
   }
 
   glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, (void*)0);
 
   // Turn off textures if they were turned on
-  if(texture.assigned) {
+  if(diffuseTexture.assigned) {
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
-    int useTex = glGetUniformLocation(program, "useTexture");
+    int useTex = glGetUniformLocation(program, "useDiffuseTexture");
+    glUniform1i(useTex, 0);
+  }
+  if(specularTexture.assigned) {
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    int useTex = glGetUniformLocation(program, "useSpecularTexture");
+    glUniform1i(useTex, 0);
+  }
+  if(normalTexture.assigned) {
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    int useTex = glGetUniformLocation(program, "useNormalTexture");
     glUniform1i(useTex, 0);
   }
   glBindVertexArray(0);

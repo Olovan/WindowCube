@@ -24,22 +24,26 @@ using namespace std;
 using glm::vec3;
 using glm::mat4;
 
+const float degToRad = 3.14159265f / 180;
+bool xrayVision = false;
+
 GLFWwindow* window;
-Model ground;
 Model customModel;
 Model customModel2;
 Model customModel3;
 Model customModel4;
 Model customModel5;
 Model street;
+Model ground;
 Model handmadeModel;
-GLuint vShader, fShader, program;
-glm::mat4 view = glm::mat4(1.0f), proj = glm::mat4(1.0f); 
-float dist = 3.0f;
-float sideMovement = 0.0f;
-float upMovement = 0.0f;
-float degToRad = 3.14159265f / 180;
 
+// Shader Stuff
+GLuint program;
+
+// Matrices
+glm::mat4 view = glm::mat4(1.0f);
+glm::mat4 mouseRotation = glm::mat4(1.0f); // Used to store only the mouse rotations so that they don't affect the view matrix
+glm::mat4 proj = glm::mat4(1.0f);
 
 void setMatrix(glm::mat4 mat, std::string name); 
 
@@ -55,11 +59,10 @@ int main(int argc, char* argv[]) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     //Rotate objects
-    customModel.modelMatrix = glm::rotate(customModel.modelMatrix, .01f, glm::vec3(0, 1, 0));
-    //customModel2.modelMatrix = glm::rotate(glm::mat4(), -.005f, glm::vec3(0, 1, 0)) * customModel2.modelMatrix;
-    customModel3.modelMatrix = glm::rotate(customModel3.modelMatrix, -.005f, glm::vec3(0, 1, 0));
+    customModel.modelMatrix = glm::rotate(customModel.modelMatrix, .01f, glm::vec3(0, 1, 0)); //Rotate rabbit
+    customModel3.modelMatrix = glm::rotate(customModel3.modelMatrix, -.005f, glm::vec3(0, 1, 0)); //Rotate earth
 
-    keyHoldEvents();
+    continuousInputHandler();
     render();
     glfwSwapBuffers(window);
     glfwPollEvents();
@@ -83,6 +86,7 @@ void init(Settings &cfg, GLFWwindow* &window) {
   }
   glfwSetWindowSizeCallback(window, windowSizeCallback);
   glfwMakeContextCurrent(window);
+  glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   glewExperimental = true;
   GLenum err = glewInit();
   if(GLEW_OK != err) {
@@ -110,6 +114,11 @@ void init(Settings &cfg, GLFWwindow* &window) {
   proj = glm::perspective(45.0f, 1.5f, 0.1f, 100.0f);
   view = glm::lookAt(vec3(0.0f, 0.0f, 3.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
   setMatrix(proj, "projection");
+  glUniform1i(glGetUniformLocation(program, "diffuseTexture"), 0);  // Texture0 is the diffuse texture
+  glUniform1i(glGetUniformLocation(program, "specularTexture"), 1); // Texture1 is the specular texture
+  glUniform1i(glGetUniformLocation(program, "normalTexture"), 2); // Texture2 is the normal texture (For bump mapping)
+  resetLightToDefaults(0);
+  resetLightToDefaults(1);
 }
 
 void crash(string message) {
@@ -122,30 +131,35 @@ void setMatrix(glm::mat4 mat, std::string name) {
   glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(mat));
 }
 
-glm::mat4 cubeModel = glm::mat4(1.0f);
-
 void render() {
-  setMatrix(view, "view");
-  int lightPos = glGetUniformLocation(program, "lightPos");
-  int diffuseColor = glGetUniformLocation(program, "diffuseColor");
-  int specularColor = glGetUniformLocation(program, "specularColor");
+  setMatrix(mouseRotation * view, "view");
+  int time = glGetUniformLocation(program, "time");
+  int lightPos = glGetUniformLocation(program, "lights[0].lightPos");
+  int diffuseColor = glGetUniformLocation(program, "lights[0].diffuseColor");
+  int specularColor = glGetUniformLocation(program, "lights[0].specularColor");
+  int ambientColor = glGetUniformLocation(program, "lights[0].ambientColor");
   int eyePos = glGetUniformLocation(program, "eyePos");
   int hardness = glGetUniformLocation(program, "hardness");
-  int specPower = glGetUniformLocation(program, "specularStrength");
+  int specPower = glGetUniformLocation(program, "lights[0].specularStrength");
   int objColor = glGetUniformLocation(program, "objectColor");
-  int ambientStr = glGetUniformLocation(program, "ambientStrength");
+  int ambientStr = glGetUniformLocation(program, "lights[0].ambientStrength");
   glm::vec3 eye = getEyePosFromView(view);
+  double elapsedTime = glfwGetTime();
   glUniform4f(eyePos, eye.x, eye.y, eye.z, 1.0f);
+  glUniform1f(time, elapsedTime);
 
-  resetLightToDefaults();
+  // Set up lighting conditions
+  resetLightToDefaults(0);
   glUniform4f(lightPos, 0, 100, -10, 0);
-  renderCube(cubeModel);
-  handmadeModel.render();
+  renderCube(glm::mat4(1.0f));
   glUniform4f(lightPos, 0, 5, -10, 0);
   glUniform3f(objColor, 0.5, 0.2, 0.0);
   glUniform1f(hardness, 50);
   glUniform1f(specPower, 0.7);
+
   ground.render();
+  handmadeModel.render();
+
   glUniform3f(objColor, 0.4, 0.4, 0.4);
 
   // Render customModel with depth mask and stencil mask
@@ -159,7 +173,7 @@ void render() {
   glUniform4f(lightPos, 0, 0, 10, 1);
   glStencilFunc(GL_EQUAL, 1, 0xFF);
   customModel.render();
-  resetLightToDefaults();
+  resetLightToDefaults(0);
 
   // Back (AlienCity)
   glUniform4f(lightPos, 0, 0, -10, 1);
@@ -171,10 +185,10 @@ void render() {
   customModel2.render();
 
   // Left (Earth)
-  glUniform4f(specularColor, 0.8, 0.8, 0.3, 1);
+  glUniform4f(specularColor, 1.0, 1.0, 1.0, 1);
   glUniform4f(diffuseColor, 1, 1, 1.0, 1.0);
-  glUniform1f(hardness, 3);
-  glUniform1f(specPower, 0.7);
+  glUniform1f(hardness, 1);
+  glUniform1f(specPower, 0.2);
   glUniform4f(lightPos, -10, 0, 0, 1);
   glStencilFunc(GL_EQUAL, 3, 0xFF);
   customModel3.render();
@@ -188,20 +202,28 @@ void render() {
   glStencilFunc(GL_EQUAL, 4, 0xFF);
   customModel4.render();
   street.render();
-  resetLightToDefaults();
+  resetLightToDefaults(0);
 
   // Teapot
   glStencilFunc(GL_NOTEQUAL, 0, 0xFF);
   glDisable(GL_DEPTH_TEST);
   glDepthMask(GL_FALSE);
-  // Draw a red outline
+
   glUniform4f(lightPos, 0, 0, 10, 1);
 
-  // Set up red sillouette
-  glUniform1f(ambientStr, 1.0f);
-  glUniform1f(specPower, 0);
-  glUniform3f(objColor, 1, 0, 0);
-  customModel5.render();
+  // Draw red sillouette
+  if(xrayVision) {
+    disableLight(1);
+    glUniform4f(diffuseColor, 0, 0, 0, 0);
+    glUniform4f(ambientColor, 1, 0, 0, 1);
+    glUniform1f(ambientStr, 1.0f);
+    glUniform1f(specPower, 0);
+    glUniform3f(objColor, 1, 0, 0);
+    customModel5.render();
+    glUniform4f(ambientColor, 0.1, 0.1, 0.1, 1);
+    glUniform4f(diffuseColor, 1, 1, 1, 1);
+    resetLightToDefaults(1);
+  }
   // Reset to defaults
   glUniform1f(ambientStr, 0.4);
   glUniform1f(specPower, 0.4);
@@ -212,7 +234,6 @@ void render() {
 
   glDisable(GL_STENCIL_TEST);
   glStencilMask(0xFF);
-
 }
 
 string readFile(string filename) {
@@ -239,8 +260,12 @@ void setupModels() {
   initCube();
 
   // Load Textures
-  customModel2.texture.loadFromFile("AlienCity.jpg");
-  customModel3.texture.loadFromFile("earth.jpg");
+  customModel2.diffuseTexture.loadFromFile("AlienCity.jpg");
+  customModel2.specularTexture.loadFromFile("alien_specular.jpg");
+  customModel3.diffuseTexture.loadFromFile("earth.jpg");
+  customModel3.normalTexture.loadFromFile("earth_bump.jpg");
+  
+  customModel3.normalTexture.assigned = false; //Turn normal mapping off at the start for dramatic effect
 
   customModel.program = program;
   customModel2.program = program;
@@ -268,20 +293,32 @@ void setupModels() {
   handmadeModel.modelMatrix = glm::translate(handmadeModel.modelMatrix, glm::vec3(0, 2, 0));
 }
 
-void resetLightToDefaults() {
-  int lightPos = glGetUniformLocation(program, "lightPos");
-  int diffuseColor = glGetUniformLocation(program, "diffuseColor");
-  int specularColor = glGetUniformLocation(program, "specularColor");
-  int eyePos = glGetUniformLocation(program, "eyePos");
-  int hardness = glGetUniformLocation(program, "hardness");
-  int specPower = glGetUniformLocation(program, "specularStrength");
-  int objColor = glGetUniformLocation(program, "objectColor");
-  int ambientStr = glGetUniformLocation(program, "ambientStrength");
+void resetLightToDefaults(int i) {
+  int lightPos = glGetUniformLocation(program, ("lights[" + std::to_string(i) + "].lightPos").c_str());
+  int ambientColor = glGetUniformLocation(program, ("lights[" + std::to_string(i) + "].ambientColor").c_str());
+  int diffuseColor = glGetUniformLocation(program, ("lights[" + std::to_string(i) + "].diffuseColor").c_str());
+  int specularColor = glGetUniformLocation(program, ("lights[" + std::to_string(i) + "].specularColor").c_str());
+  int ambientStr = glGetUniformLocation(program, ("lights[" + std::to_string(i) + "].ambientStrength").c_str());
+  int specPower = glGetUniformLocation(program, ("lights[" + std::to_string(i) + "].specularStrength").c_str());
 
+  glUniform4f(lightPos, 0, 5, 0, 1);
+  glUniform4f(ambientColor, 0.1, 0.1, 0.1, 1);
   glUniform4f(specularColor, 1, 1, 1, 1);
   glUniform4f(diffuseColor, 1, 1, 1, 1);
   glUniform1f(ambientStr, 0.4);
   glUniform1f(specPower, 0.4);
-  glUniform3f(objColor, 0.4, 0.4, 0.4);
-  glUniform1f(hardness, 32);
+}
+
+void disableLight(int i) {
+  int ambientColor = glGetUniformLocation(program, ("lights[" + std::to_string(i) + "].ambientColor").c_str());
+  int diffuseColor = glGetUniformLocation(program, ("lights[" + std::to_string(i) + "].diffuseColor").c_str());
+  int specularColor = glGetUniformLocation(program, ("lights[" + std::to_string(i) + "].specularColor").c_str());
+  int ambientStr = glGetUniformLocation(program, ("lights[" + std::to_string(i) + "].ambientStrength").c_str());
+  int specPower = glGetUniformLocation(program, ("lights[" + std::to_string(i) + "].specularStrength").c_str());
+
+  glUniform4f(ambientColor, 0.0, 0.0, 0.0, 0);
+  glUniform4f(specularColor, 0, 0, 0, 0);
+  glUniform4f(diffuseColor, 0, 0, 0, 0);
+  glUniform1f(ambientStr, 0.0);
+  glUniform1f(specPower, 0.0);
 }

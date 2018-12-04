@@ -52,22 +52,23 @@ void renderCube(glm::mat4 base) {
   glUniform3f(objColor, 1, 1, 1);
   renderFrame(base);
 
+  glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+  glDepthMask(GL_FALSE);
+
   glUniform3f(objColor, 0.8, 0.2, 0.2);
   //Front
   enableStencil(1);
-  top.render(base);
+  front.render(base);
   disableStencil();
 
+  // Keep the background color for the large environments
   glUniform3f(objColor, 0.2, 0.5, 0.2);
+  glDepthMask(GL_TRUE);
+  glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
   // Back
   enableStencil(2);
   back.render(base);
-  disableStencil();
-
-  glUniform3f(objColor, 0.2, 0.2, 0.8);
-  // Left
-  enableStencil(3);
-  left.render(base);
   disableStencil();
 
   glUniform3f(objColor, 0.8, 0.2, 0.8);
@@ -76,17 +77,27 @@ void renderCube(glm::mat4 base) {
   right.render(base);
   disableStencil();
 
-  glUniform3f(objColor, 0.4, 0.4, 0.4);
+  glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+  glDepthMask(GL_FALSE);
 
-  //front.render(base);
+  glUniform3f(objColor, 0.2, 0.2, 0.8);
+  // Left
+  enableStencil(3);
+  left.render(base);
+  disableStencil();
+
+  glUniform3f(objColor, 0.4, 0.4, 0.4);
+  top.render(base);
+
   bottom.render(base);
+  glDepthMask(GL_TRUE);
+  glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 }
 
 void enableStencil(int num) {
   glEnable(GL_STENCIL_TEST);
   glStencilFunc(GL_ALWAYS, num, 0xFF);
   glStencilMask(0xFF);
-  //glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 }
 
 void renderFrame(glm::mat4 base) {
@@ -127,5 +138,4 @@ void renderFrame(glm::mat4 base) {
 
 void disableStencil() {
   glDisable(GL_STENCIL_TEST);
-  //glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 }

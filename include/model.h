@@ -15,7 +15,9 @@ class Model {
     std::vector<unsigned int> indices;
     glm::mat4 modelMatrix = glm::mat4(1.0f);
     unsigned int program; //Shader program
-    Texture texture;
+    Texture diffuseTexture;
+    Texture specularTexture;
+    Texture normalTexture;
 
 
     bool loadFromFile(std::string filename, bool normalize);

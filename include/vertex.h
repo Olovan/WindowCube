@@ -17,6 +17,10 @@ struct Vertex
   // Texture Coordinate Vector
   glm::vec2 TextureCoordinate;
 
+  // Used for Bump mapping
+  glm::vec3 Tangent;
+  glm::vec3 BiTangent;
+
   bool operator==(const Vertex& other) const;
 };
 
