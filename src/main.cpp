@@ -77,7 +77,7 @@ void init(Settings &cfg, GLFWwindow* &window) {
   if(!glfwInit()) {
     crash("GLFW init failed!");
   }
-  cfg.loadFromFile("settings.config");
+  cfg.loadFromFile("resources/settings.config");
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   window = glfwCreateWindow(cfg.windowWidth, cfg.windowHeight, cfg.windowTitle.c_str(), NULL, NULL);
@@ -249,21 +249,21 @@ glm::vec3 getEyePosFromView(glm::mat4 &view) {
 
 void setupModels() {
   // Load Models
-  customModel.loadFromFile("rabbit.obj", true);
-  customModel2.loadFromFile("AlienCity.obj", true);
-  customModel3.loadFromFile("earth.obj", true);
-  customModel4.loadFromFile("lamp.obj", true);
-  customModel5.loadFromFile("teapot.obj", true);
-  street.loadFromFile("StreetEnv.obj", true);
-  ground.loadFromFile("quad.obj", true);
-  handmadeModel.loadFromFile("CustomObject.obj");
+  customModel.loadFromFile("resources/rabbit.obj", true);
+  customModel2.loadFromFile("resources/AlienCity.obj", true);
+  customModel3.loadFromFile("resources/earth.obj", true);
+  customModel4.loadFromFile("resources/lamp.obj", true);
+  customModel5.loadFromFile("resources/teapot.obj", true);
+  street.loadFromFile("resources/StreetEnv.obj", true);
+  ground.loadFromFile("resources/quad.obj", true);
+  handmadeModel.loadFromFile("resources/CustomObject.obj");
   initCube();
 
   // Load Textures
-  customModel2.diffuseTexture.loadFromFile("AlienCity.jpg");
-  customModel2.specularTexture.loadFromFile("alien_specular.jpg");
-  customModel3.diffuseTexture.loadFromFile("earth.jpg");
-  customModel3.normalTexture.loadFromFile("earth_bump.jpg");
+  customModel2.diffuseTexture.loadFromFile("resources/AlienCity.jpg");
+  customModel2.specularTexture.loadFromFile("resources/alien_specular.jpg");
+  customModel3.diffuseTexture.loadFromFile("resources/earth.jpg");
+  customModel3.normalTexture.loadFromFile("resources/earth_bump.jpg");
   
   customModel3.normalTexture.assigned = false; //Turn normal mapping off at the start for dramatic effect
 

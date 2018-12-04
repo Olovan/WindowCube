@@ -14,13 +14,13 @@ Model cube;
 extern GLuint program;
 
 void initCube() {
-  front.loadFromFile("quad.obj");
-  back.loadFromFile("quad.obj");
-  left.loadFromFile("quad.obj");
-  right.loadFromFile("quad.obj");
-  top.loadFromFile("quad.obj");
-  bottom.loadFromFile("quad.obj");
-  cube.loadFromFile("cube.obj");
+  front.loadFromFile("resources/quad.obj");
+  back.loadFromFile("resources/quad.obj");
+  left.loadFromFile("resources/quad.obj");
+  right.loadFromFile("resources/quad.obj");
+  top.loadFromFile("resources/quad.obj");
+  bottom.loadFromFile("resources/quad.obj");
+  cube.loadFromFile("resources/cube.obj");
 
   front.program = program;
   back.program = program;
