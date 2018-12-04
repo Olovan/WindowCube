@@ -1,3 +1,4 @@
+#include <Windows.h> // Need windows.h before GL.h
 #include "texture.h"
 #include "stb_image.h"
 #include <GL/gl.h>

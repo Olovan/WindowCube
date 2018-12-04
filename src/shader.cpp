@@ -1,3 +1,4 @@
+#include <Windows.h> // Need windows.h before GL.h
 #include <GL/glew.h>
 #include "shader.h"
 #include <vector>

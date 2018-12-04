@@ -1,3 +1,4 @@
+#include <Windows.h> // Need windows.h before GL.h
 #include "model.h"
 #include "callbacks.h"
 #include <GLFW/glfw3.h>

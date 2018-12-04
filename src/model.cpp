@@ -1,4 +1,5 @@
 #include <GL/glew.h>
+#include <Windows.h> // Need windows.h before GL.h
 #include "model.h" 
 
 #include "tinyobj.h"

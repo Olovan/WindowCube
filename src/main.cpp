@@ -1,4 +1,5 @@
 #include <GL/glew.h> // Call glew first because it's picky like that
+#include <Windows.h> // Need windows.h before GL.h
 #include "main.h"
 #include "model.h"
 #include "settings.h"
